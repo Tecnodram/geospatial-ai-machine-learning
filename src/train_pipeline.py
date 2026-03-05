@@ -4,6 +4,7 @@
 import os, json, argparse, datetime, shutil
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from sklearn.base import clone
 from sklearn.model_selection import GroupKFold
@@ -267,9 +268,9 @@ def main():
     out_dir = cfg["project"]["out_dir"]
     ensure_dir(out_dir)
 
-    # ✅ Start experiment run (auto-logging)
+    # Start experiment run (auto-logging)
     run_id, run_path = start_experiment_run(cfg, cache_dir)
-    print(f"🧪 EXP RUN: {run_id} -> {run_path}")
+    print(f"EXP RUN: {run_id} -> {run_path}")
 
     switches = cfg["switches"]
     if args.dev:
@@ -277,7 +278,7 @@ def main():
 
     targets = cfg["targets"]["list"]
 
-    # ✅ y_mode global + override por target
+    # y_mode global + override por target
     y_mode_default = cfg["targets"]["y_mode"]
     y_mode_by_target = cfg.get("targets", {}).get("y_mode_by_target", {})
 
@@ -305,7 +306,7 @@ def main():
         valid_df = pd.read_pickle(cache_valid)
         with open(cache_feat, "r", encoding="utf-8") as f:
             _base_feature_cols = json.load(f)
-        print("⚡ Using CACHE dataset.")
+        print("Using CACHE dataset.")
     else:
         # load raw
         wq = pd.read_csv(os.path.join(raw_dir, cfg["io"]["train_wq_name"]))
@@ -371,7 +372,7 @@ def main():
         with open(cache_feat, "w", encoding="utf-8") as f:
             json.dump(numeric_feature_cols(train_df, targets), f, ensure_ascii=False, indent=2)
 
-        print("✅ Cache saved.")
+        print("Cache saved.")
 
     # Write minimal dataset/meta info into run folder
     meta = {
@@ -401,7 +402,16 @@ def main():
         gkf = GroupKFold(n_splits=cv_folds)
 
         scores = []
-        for tr_idx, va_idx in gkf.split(df, y, groups=groups):
+
+        fold_iter = gkf.split(df, y, groups=groups)
+        fold_iter = tqdm(
+            fold_iter,
+            total=cv_folds,
+            desc=f"CV folds | {target}",
+            leave=False
+        )
+
+        for fold_i, (tr_idx, va_idx) in enumerate(fold_iter, start=1):
             X_tr = df.iloc[tr_idx].copy()
             X_va = df.iloc[va_idx].copy()
             y_tr = y[tr_idx]
@@ -424,7 +434,7 @@ def main():
 
             feat = numeric_feature_cols(X_tr, targets)
 
-            # ===== LOCK CV: mismas columnas train vs val en el fold =====
+            # LOCK CV: mismas columnas train vs val en el fold
             missing_in_va = [c for c in feat if c not in X_va.columns]
             assert len(missing_in_va) == 0, (
                 f"ERROR CV: fold-valid missing {len(missing_in_va)} cols for target={target}. "
@@ -442,7 +452,10 @@ def main():
             if target == "Dissolved Reactive Phosphorus":
                 pred = np.maximum(pred, 0.0)
 
-            scores.append(r2_score(y_va, pred))
+            sc = r2_score(y_va, pred)
+            scores.append(sc)
+
+            fold_iter.set_postfix(fold=fold_i, r2=f"{sc:.4f}")
 
         return float(np.mean(scores)), float(np.std(scores)), scores
 
@@ -450,10 +463,11 @@ def main():
     if switches["run_cv"]:
         print("\n" + "="*80)
         print(f"CV REPORT | folds={cv_folds} | dev_mode={switches['dev_mode']} | TE={te_enabled} (fold-safe)")
-        for t in targets:
+
+        for t in tqdm(targets, desc="CV targets", unit="target"):
             m, s, folds = cv_with_fold_te(train_df, t)
             cv_report[t] = {"mean": m, "std": s, "folds": [float(x) for x in folds]}
-            print(f"{t:>28} | mean={m:.4f} ± {s:.4f} | folds={np.round(folds,4)}")
+            print(f"{t:>28} | mean={m:.4f} +/- {s:.4f} | folds={np.round(folds,4)}")
 
         safe_write_json(os.path.join(run_path, "cv_report.json"), cv_report)
 
@@ -471,7 +485,7 @@ def main():
         tr0 = train_df.copy()
         va0 = valid_df.copy()
 
-        for t in targets:
+        for t in tqdm(targets, desc="FINAL train (per target)", unit="target"):
             tr = tr0.copy()
             va = va0.copy()
 
@@ -492,16 +506,13 @@ def main():
 
             feat_cols = numeric_feature_cols(tr, targets)
 
-            # Guardar manifest por target (auditable/reproducible)
             manifest_name = f"feature_manifest_{t.replace(' ','_')}.json"
             manifest_path_cache = os.path.join(cache_dir, manifest_name)
             with open(manifest_path_cache, "w", encoding="utf-8") as f:
                 json.dump(feat_cols, f, ensure_ascii=False, indent=2)
 
-            # Copy manifests to run folder too
             shutil.copy2(manifest_path_cache, os.path.join(run_path, manifest_name))
 
-            # ===== LOCK FINAL: mismas features y mismo orden train vs valid =====
             missing_in_valid = [c for c in feat_cols if c not in va.columns]
             assert len(missing_in_valid) == 0, (
                 f"ERROR: valid is missing {len(missing_in_valid)} features for target={t}. "
@@ -512,7 +523,7 @@ def main():
             va_X = va[feat_cols].copy()
             assert list(tr_X.columns) == list(va_X.columns), "ERROR: column order mismatch train vs valid"
 
-            print(f"✅ Features locked for {t}: {len(feat_cols)} cols")
+            print(f"Features locked for {t}: {len(feat_cols)} cols")
 
             pipe = build_pipeline(model_final, feat_cols)
             pipe.fit(tr_X, y_t)
@@ -523,22 +534,19 @@ def main():
 
             submission_out[t] = pred
 
-        # CRITICAL: KEYS EXACTAS ya vienen del template_raw (intacto)
         out_name = "submission_V5_2_OOFTE_fixkeys.csv"
         out_path = os.path.join(out_dir, out_name)
         submission_out.to_csv(out_path, index=False)
 
-        # final sanity
         chk = pd.read_csv(out_path)
         assert chk.shape == (200, 6)
         assert not chk[targets].isna().any().any()
         assert chk[KEYS].equals(template_raw[KEYS]), "KEYS no idénticas al template crudo"
         assert list(chk.columns) == list(template_raw.columns), "ERROR: submission columns != template columns"
 
-        # copy submission to run folder
         shutil.copy2(out_path, os.path.join(run_path, out_name))
 
-        print("\n✅ Saved:", out_path)
+        print("\nSaved:", out_path)
         print("DRP min/max:", float(chk["Dissolved Reactive Phosphorus"].min()), float(chk["Dissolved Reactive Phosphorus"].max()))
         safe_write_json(os.path.join(run_path, "artifacts.json"), {"main_submission": out_path})
 
