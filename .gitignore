@@ -1,9 +1,27 @@
-# No subir datos crudos ni envíos
-data/raw/
-submissions/
-submission.csv
+# environments
+.venv/
 
-# Basura de Python/Notebooks
+# data (NO subir nada)
+data/
+
+# experiments
+experiments/
+
+# submissions
+submissions_batch/
+
+# cache
+cache/
+
+# python
 __pycache__/
 *.pyc
-.ipynb_checkpoints/
+*.pkl
+*.parquet
+
+# notebooks junk
+notebooks/.ipynb_checkpoints/
+
+# competition artifacts
+submissions/
+notebooks/
