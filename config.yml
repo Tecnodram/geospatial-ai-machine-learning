@@ -3,9 +3,7 @@ project:
   external_path: "data/external_geofeatures.csv"
   cache_dir: "cache"
   out_dir: "submissions_batch"
-
-experiment:
-  log_dir: "experiments"
+  exp_dir: "experiments"
 
 io:
   template_name: "submission_template.csv"
@@ -16,7 +14,7 @@ io:
   valid_tc_name: "terraclimate_features_validation.csv"
 
 switches:
-  build_dataset: true
+  build_dataset: false   # <-- CAMBIO CLAVE
   run_cv: true
   train_final: true
   dev_mode: false
@@ -59,12 +57,6 @@ model:
     max_features: "sqrt"
     n_jobs: -1
     random_state: 42
-
-ensemble:
-  enabled: false
-  models:
-    - ExtraTrees
-    - HistGradientBoosting
 
 batch:
   candidates:
