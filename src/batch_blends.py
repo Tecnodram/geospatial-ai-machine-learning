@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os, argparse
+import os, argparse, datetime
 import numpy as np
 import pandas as pd
 
@@ -46,6 +46,38 @@ def score_proxy(df):
 
     return 1000.0 - penalty
 
+def read_last_run_path(cache_dir: str):
+    p = os.path.join(cache_dir, "last_run_path.txt")
+    if os.path.exists(p):
+        try:
+            txt = open(p, "r", encoding="utf-8").read().strip()
+            return txt if txt else None
+        except Exception:
+            return None
+    return None
+
+def append_leaderboard_log(csv_path: str, row: dict):
+    # Creates file if missing
+    cols = [
+        "timestamp",
+        "run_id",
+        "recommended_name",
+        "recommended_file",
+        "proxy",
+        "notes",
+    ]
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path)
+    else:
+        df = pd.DataFrame(columns=cols)
+
+    for c in cols:
+        if c not in df.columns:
+            df[c] = np.nan
+
+    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    df.to_csv(csv_path, index=False)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
@@ -54,11 +86,12 @@ def main():
     cfg = load_yaml(args.config)
     raw_dir = cfg["project"]["raw_dir"]
     out_dir = cfg["project"]["out_dir"]
+    cache_dir = cfg["project"].get("cache_dir", "cache")
     os.makedirs(out_dir, exist_ok=True)
 
     template_raw = pd.read_csv(os.path.join(raw_dir, cfg["io"]["template_name"]))
 
-    # load new main output if exists
+    # load new main output if exists (in out_dir)
     main_out = os.path.join(out_dir, "submission_V5_2_OOFTE_fixkeys.csv")
     base_candidates = []
     if os.path.exists(main_out):
@@ -134,11 +167,54 @@ def main():
 
     report.sort(key=lambda x: -x[0])
     best = report[0]
+    best_proxy, best_name, best_path = best
+
+    # -------- experiment folder integration --------
+    # If train_pipeline ran, it wrote cache/last_run_path.txt.
+    run_path = read_last_run_path(cache_dir)
+    run_id = os.path.basename(run_path) if run_path else ""
+
+    if run_path and os.path.isdir(run_path):
+        # Copy recommended file into experiment folder for audit trail
+        rec_copy = os.path.join(run_path, os.path.basename(best_path))
+        try:
+            import shutil
+            shutil.copy2(best_path, rec_copy)
+            # Also store a tiny recommendation json
+            rec = {
+                "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+                "recommended_name": best_name,
+                "recommended_file": best_path,
+                "proxy": float(best_proxy),
+            }
+            with open(os.path.join(run_path, "batch_recommendation.json"), "w", encoding="utf-8") as f:
+                import json
+                json.dump(rec, f, ensure_ascii=False, indent=2)
+            print(f"📦 Copied recommendation into run folder: {rec_copy}")
+        except Exception as e:
+            print("⚠️ No pude copiar a run folder:", e)
+
+    # -------- leaderboard log (root) --------
+    log_path = "leaderboard_log.csv"
+    row = {
+        "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        "run_id": run_id,
+        "recommended_name": best_name,
+        "recommended_file": best_path,
+        "proxy": float(best_proxy),
+        "notes": "auto-recommend from batch_blends",
+    }
+    try:
+        append_leaderboard_log(log_path, row)
+        print(f"🧾 Updated {log_path}")
+    except Exception as e:
+        print("⚠️ No pude actualizar leaderboard_log.csv:", e)
+
     print("\n" + "="*80)
     print("RECOMENDACIÓN AUTOMÁTICA:")
-    print("📌 Subir:", best[1])
-    print("📄 Archivo:", best[2])
-    print("🔎 Proxy:", f"{best[0]:.2f}")
+    print("📌 Subir:", best_name)
+    print("📄 Archivo:", best_path)
+    print("🔎 Proxy:", f"{best_proxy:.2f}")
     print("="*80)
 
 if __name__ == "__main__":

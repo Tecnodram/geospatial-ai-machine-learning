@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os, json, argparse
+import os, json, argparse, datetime, shutil
 import numpy as np
 import pandas as pd
 
@@ -29,8 +29,36 @@ LON_COL = "Longitude"
 DATE_COL = "Sample Date"
 KEYS = [LAT_COL, LON_COL, DATE_COL]
 
-def ensure_dir(p): 
+def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
+
+def now_run_id(prefix="exp"):
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{prefix}_{ts}"
+
+def safe_write_text(path, text: str):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+def safe_write_json(path, obj):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+
+def start_experiment_run(cfg: dict, cache_dir: str):
+    exp_dir = cfg.get("project", {}).get("exp_dir", "experiments")
+    ensure_dir(exp_dir)
+    run_id = now_run_id("exp")
+    run_path = os.path.join(exp_dir, run_id)
+    ensure_dir(run_path)
+
+    # snapshot config (json)
+    safe_write_json(os.path.join(run_path, "config_snapshot.json"), cfg)
+
+    # pointer for other scripts (batch_blends)
+    ensure_dir(cache_dir)
+    safe_write_text(os.path.join(cache_dir, "last_run_path.txt"), run_path + "\n")
+
+    return run_id, run_path
 
 def normalize_keys_for_matching(df: pd.DataFrame) -> pd.DataFrame:
     """Solo para matching interno (NO para template crudo)."""
@@ -239,6 +267,10 @@ def main():
     out_dir = cfg["project"]["out_dir"]
     ensure_dir(out_dir)
 
+    # ✅ Start experiment run (auto-logging)
+    run_id, run_path = start_experiment_run(cfg, cache_dir)
+    print(f"🧪 EXP RUN: {run_id} -> {run_path}")
+
     switches = cfg["switches"]
     if args.dev:
         switches["dev_mode"] = True
@@ -341,6 +373,21 @@ def main():
 
         print("✅ Cache saved.")
 
+    # Write minimal dataset/meta info into run folder
+    meta = {
+        "run_id": run_id,
+        "cache_train": cache_train,
+        "cache_valid": cache_valid,
+        "cache_feat": cache_feat,
+        "out_dir": out_dir,
+        "raw_dir": raw_dir,
+        "te_enabled": bool(te_enabled),
+        "te_grids": list(te_grids),
+        "cv_folds": int(cv_folds),
+        "dev_mode": bool(switches["dev_mode"]),
+    }
+    safe_write_json(os.path.join(run_path, "run_meta.json"), meta)
+
     # ----------------------------
     # CV (fold-safe TE dentro del fold)
     # ----------------------------
@@ -399,12 +446,16 @@ def main():
 
         return float(np.mean(scores)), float(np.std(scores)), scores
 
+    cv_report = {}
     if switches["run_cv"]:
         print("\n" + "="*80)
         print(f"CV REPORT | folds={cv_folds} | dev_mode={switches['dev_mode']} | TE={te_enabled} (fold-safe)")
         for t in targets:
             m, s, folds = cv_with_fold_te(train_df, t)
+            cv_report[t] = {"mean": m, "std": s, "folds": [float(x) for x in folds]}
             print(f"{t:>28} | mean={m:.4f} ± {s:.4f} | folds={np.round(folds,4)}")
+
+        safe_write_json(os.path.join(run_path, "cv_report.json"), cv_report)
 
     # ----------------------------
     # FINAL TRAIN + SUBMISSION (OOF TE TRAIN + full-map VALID)
@@ -442,9 +493,13 @@ def main():
             feat_cols = numeric_feature_cols(tr, targets)
 
             # Guardar manifest por target (auditable/reproducible)
-            manifest_path = os.path.join(cache_dir, f"feature_manifest_{t.replace(' ','_')}.json")
-            with open(manifest_path, "w", encoding="utf-8") as f:
+            manifest_name = f"feature_manifest_{t.replace(' ','_')}.json"
+            manifest_path_cache = os.path.join(cache_dir, manifest_name)
+            with open(manifest_path_cache, "w", encoding="utf-8") as f:
                 json.dump(feat_cols, f, ensure_ascii=False, indent=2)
+
+            # Copy manifests to run folder too
+            shutil.copy2(manifest_path_cache, os.path.join(run_path, manifest_name))
 
             # ===== LOCK FINAL: mismas features y mismo orden train vs valid =====
             missing_in_valid = [c for c in feat_cols if c not in va.columns]
@@ -469,7 +524,8 @@ def main():
             submission_out[t] = pred
 
         # CRITICAL: KEYS EXACTAS ya vienen del template_raw (intacto)
-        out_path = os.path.join(out_dir, "submission_V5_2_OOFTE_fixkeys.csv")
+        out_name = "submission_V5_2_OOFTE_fixkeys.csv"
+        out_path = os.path.join(out_dir, out_name)
         submission_out.to_csv(out_path, index=False)
 
         # final sanity
@@ -479,8 +535,12 @@ def main():
         assert chk[KEYS].equals(template_raw[KEYS]), "KEYS no idénticas al template crudo"
         assert list(chk.columns) == list(template_raw.columns), "ERROR: submission columns != template columns"
 
+        # copy submission to run folder
+        shutil.copy2(out_path, os.path.join(run_path, out_name))
+
         print("\n✅ Saved:", out_path)
         print("DRP min/max:", float(chk["Dissolved Reactive Phosphorus"].min()), float(chk["Dissolved Reactive Phosphorus"].max()))
+        safe_write_json(os.path.join(run_path, "artifacts.json"), {"main_submission": out_path})
 
 if __name__ == "__main__":
     main()
