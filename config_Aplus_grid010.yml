@@ -1,6 +1,6 @@
 project:
   raw_dir: "data/raw"
-  external_path: "data/external_geofeatures_plus_hydro.csv"
+  external_path: "data/external_geofeatures.csv"
   cache_dir: "cache"
   out_dir: "submissions_batch"
   exp_dir: "experiments"
@@ -14,7 +14,7 @@ io:
   valid_tc_name: "terraclimate_features_validation.csv"
 
 switches:
-  build_dataset: true
+  build_dataset: false   # usa CACHE, mucho más rápido
   run_cv: true
   train_final: true
   dev_mode: false
@@ -25,7 +25,7 @@ cv:
   best_grid:
     Total Alkalinity: 0.03
     Electrical Conductance: 0.10
-    Dissolved Reactive Phosphorus: 0.10
+    Dissolved Reactive Phosphorus: 0.10   # <-- CAMBIO: grid más macro para estabilizar folds
 
 te:
   enabled: true
@@ -41,9 +41,10 @@ targets:
   y_mode_by_target:
     "Total Alkalinity": "winsor"
     "Electrical Conductance": "winsor"
-    "Dissolved Reactive Phosphorus": "none"
+    "Dissolved Reactive Phosphorus": "none"   # Poisson: y >= 0, sin log
 
 model:
+  # Defaults (TA/EC): ExtraTrees
   et_cv:
     n_estimators: 1400
     min_samples_leaf: 2
@@ -58,6 +59,7 @@ model:
     n_jobs: -1
     random_state: 42
 
+  # --- A+ (más estable, buscando subir mean sin romper folds) ---
   cv_by_target:
     "Dissolved Reactive Phosphorus":
       name: "HistGradientBoostingRegressor"

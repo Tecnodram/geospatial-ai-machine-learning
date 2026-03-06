@@ -12,7 +12,7 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor
+from sklearn.ensemble import ExtraTreesRegressor
 
 # ----------------------------
 # YAML loader
@@ -78,49 +78,26 @@ def make_groups(df, grid):
 
 def y_transform_fit(y_tr: np.ndarray, mode: str):
     y_tr = np.asarray(y_tr, dtype=float)
+
     if mode == "none":
         return (lambda x: np.asarray(x, dtype=float),
                 lambda x: np.asarray(x, dtype=float))
+
     if mode == "winsor":
         lo = np.nanquantile(y_tr, 0.01)
         hi = np.nanquantile(y_tr, 0.99)
         fwd = lambda x: np.clip(np.asarray(x, dtype=float), lo, hi)
         inv = lambda x: np.asarray(x, dtype=float)
         return fwd, inv
+
+    if mode == "log1p":
+        # DRP suele ser heavy-tail y con ceros; log1p estabiliza.
+        # Seguridad: evita valores negativos por ruido (los recorta a 0 antes del log).
+        fwd = lambda x: np.log1p(np.maximum(np.asarray(x, dtype=float), 0.0))
+        inv = lambda x: np.expm1(np.asarray(x, dtype=float))
+        return fwd, inv
+
     raise ValueError(f"Unknown y_mode: {mode}")
-
-
-# ----------------------------
-# Model factory (per-target)
-# ----------------------------
-def build_model_from_cfg(cfg: dict, which: str, target: str):
-    """
-    which: "cv" or "final"
-    Supports:
-      - ExtraTreesRegressor (default)
-      - HistGradientBoostingRegressor (useful for DRP with loss='poisson')
-    """
-    model_cfg = cfg.get("model", {})
-    # optional per-target override
-    by_t = model_cfg.get(f"{which}_by_target", {}) or {}
-    spec = by_t.get(target)
-
-    if spec is None:
-        # fallback: original behavior
-        params = model_cfg.get(f"et_{which}", {})
-        return ExtraTreesRegressor(**params)
-
-    name = str(spec.get("name", "")).strip()
-    params = spec.get("params", {}) or {}
-
-    if name == "ExtraTreesRegressor":
-        return ExtraTreesRegressor(**params)
-
-    if name == "HistGradientBoostingRegressor":
-        # NOTE: for loss='poisson', y must be >= 0
-        return HistGradientBoostingRegressor(**params)
-
-    raise ValueError(f"Unknown model spec for target={target}: {name}")
 
 # ----------------------------
 # Feature Engineering (V4)
@@ -426,7 +403,8 @@ def main():
     # CV (fold-safe TE dentro del fold)
     # ----------------------------
     et_cv_params = cfg["model"]["et_cv"]
-    model_cv_default = ExtraTreesRegressor(**et_cv_params)
+    model_cv = ExtraTreesRegressor(**et_cv_params)
+
     def cv_with_fold_te(df, target):
         grid = float(best_grid[target])
         y = df[target].astype(float).values
@@ -449,13 +427,6 @@ def main():
             y_tr = y[tr_idx]
             y_va = y[va_idx]
 
-            
-
-            # If using Poisson loss, enforce non-negative targets
-            _m = cfg.get("model", {}).get("cv_by_target", {}).get(target)
-            if _m and _m.get("name") == "HistGradientBoostingRegressor" and str(_m.get("params", {}).get("loss", "")) == "poisson":
-                y_tr = np.maximum(y_tr, 0.0)
-                y_va = np.maximum(y_va, 0.0)
             mode_t = y_mode_by_target.get(target, y_mode_default)
             fwd, inv = y_transform_fit(y_tr, mode_t)
             y_tr_t = fwd(y_tr)
@@ -484,7 +455,6 @@ def main():
             X_va_X = X_va[feat].copy()
             assert list(X_tr_X.columns) == list(X_va_X.columns), "ERROR CV: column order mismatch"
 
-            model_cv = build_model_from_cfg(cfg, "cv", target)
             pipe = build_pipeline(model_cv, feat)
             pipe.fit(X_tr_X, y_tr_t)
             pred = inv(pipe.predict(X_va_X))
@@ -516,8 +486,9 @@ def main():
     # ----------------------------
     if switches["train_final"]:
         et_final_params = cfg["model"]["et_final"]
-        model_final_default = ExtraTreesRegressor(**et_final_params)
-# start from a CLEAN submission frame
+        model_final = ExtraTreesRegressor(**et_final_params)
+
+        # start from a CLEAN submission frame
         submission_out = template_raw.copy(deep=True)
 
         # train/valid working copies (normalized for modeling)
@@ -539,12 +510,6 @@ def main():
                 )
 
             y = tr[t].astype(float).values
-            
-
-            # If using Poisson loss, enforce non-negative targets
-            _mf = cfg.get("model", {}).get("final_by_target", {}).get(t)
-            if _mf and _mf.get("name") == "HistGradientBoostingRegressor" and str(_mf.get("params", {}).get("loss", "")) == "poisson":
-                y = np.maximum(y, 0.0)
             mode_t = y_mode_by_target.get(t, y_mode_default)
             fwd, inv = y_transform_fit(y, mode_t)
             y_t = fwd(y)
@@ -570,7 +535,6 @@ def main():
 
             print(f"Features locked for {t}: {len(feat_cols)} cols")
 
-            model_final = build_model_from_cfg(cfg, "final", t)
             pipe = build_pipeline(model_final, feat_cols)
             pipe.fit(tr_X, y_t)
             pred = inv(pipe.predict(va_X))

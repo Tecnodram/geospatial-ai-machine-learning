@@ -149,7 +149,7 @@ def make_variants(base_cfg: dict, n: int, seed: int):
 
         # y transform para DRP
         # - none o winsor (winsor suele ayudar por colas pesadas)
-        cfg["targets"]["y_mode_by_target"]["Dissolved Reactive Phosphorus"] = random.choice(["none", "winsor", "log1p"])
+        cfg["targets"]["y_mode_by_target"]["Dissolved Reactive Phosphorus"] = random.choice(["none", "winsor"])
 
         variants.append(cfg)
 

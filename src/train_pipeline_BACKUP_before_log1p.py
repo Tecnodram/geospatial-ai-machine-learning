@@ -12,7 +12,7 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor
+from sklearn.ensemble import ExtraTreesRegressor
 
 # ----------------------------
 # YAML loader
@@ -89,39 +89,6 @@ def y_transform_fit(y_tr: np.ndarray, mode: str):
         return fwd, inv
     raise ValueError(f"Unknown y_mode: {mode}")
 
-
-# ----------------------------
-# Model factory (per-target)
-# ----------------------------
-def build_model_from_cfg(cfg: dict, which: str, target: str):
-    """
-    which: "cv" or "final"
-    Supports:
-      - ExtraTreesRegressor (default)
-      - HistGradientBoostingRegressor (useful for DRP with loss='poisson')
-    """
-    model_cfg = cfg.get("model", {})
-    # optional per-target override
-    by_t = model_cfg.get(f"{which}_by_target", {}) or {}
-    spec = by_t.get(target)
-
-    if spec is None:
-        # fallback: original behavior
-        params = model_cfg.get(f"et_{which}", {})
-        return ExtraTreesRegressor(**params)
-
-    name = str(spec.get("name", "")).strip()
-    params = spec.get("params", {}) or {}
-
-    if name == "ExtraTreesRegressor":
-        return ExtraTreesRegressor(**params)
-
-    if name == "HistGradientBoostingRegressor":
-        # NOTE: for loss='poisson', y must be >= 0
-        return HistGradientBoostingRegressor(**params)
-
-    raise ValueError(f"Unknown model spec for target={target}: {name}")
-
 # ----------------------------
 # Feature Engineering (V4)
 # ----------------------------
@@ -154,30 +121,72 @@ def enrich_features(df: pd.DataFrame) -> pd.DataFrame:
     df["lat_lon"] = df[LAT_COL] * df[LON_COL]
     return df
 
-def add_valid_lag1_and_time(df: pd.DataFrame, lag_cols=("pet", "NDMI", "MNDWI")) -> pd.DataFrame:
+def add_valid_lag1_and_time(
+    df: pd.DataFrame,
+    lag_cols=("pet", "NDMI", "MNDWI", "nir", "green", "swir16", "swir22"),
+) -> pd.DataFrame:
+    """
+    Crea lags/rolling temporales POR punto (lat,lon) validando que existan meses consecutivos.
+    - lag1 solo si el registro previo es exactamente 1 mes antes
+    - lag2 solo si hay continuidad a 2 meses
+    - rolling(3) (mean/std) solo si hay continuidad a 2 meses (t-1 y t-2) -> ventana completa 3
+      (si no, se deja NaN para evitar mezclar períodos no consecutivos)
+
+    También agrega: year, month, dayofyear.
+    """
     df = df.copy()
     df["_orig_order"] = np.arange(len(df))
     df = df.sort_values([LAT_COL, LON_COL, DATE_COL])
 
-    prev_date = df.groupby([LAT_COL, LON_COL])[DATE_COL].shift(1)
-    month_diff = (
-        (df[DATE_COL].dt.year - prev_date.dt.year) * 12
-        + (df[DATE_COL].dt.month - prev_date.dt.month)
-    )
-    has_lag1 = (month_diff == 1)
+    g = df.groupby([LAT_COL, LON_COL], sort=False)
 
+    prev1_date = g[DATE_COL].shift(1)
+    prev2_date = g[DATE_COL].shift(2)
+
+    mdiff1 = (df[DATE_COL].dt.year - prev1_date.dt.year) * 12 + (df[DATE_COL].dt.month - prev1_date.dt.month)
+    mdiff2 = (df[DATE_COL].dt.year - prev2_date.dt.year) * 12 + (df[DATE_COL].dt.month - prev2_date.dt.month)
+
+    has_lag1 = (mdiff1 == 1)
+    has_lag2 = (mdiff2 == 2)
+
+    # Lags + deltas (solo pasado)
     for c in lag_cols:
         if c in df.columns:
-            lag = df.groupby([LAT_COL, LON_COL])[c].shift(1)
-            df[f"{c}_lag1"] = lag
-            df.loc[~has_lag1, f"{c}_lag1"] = np.nan
+            lag1 = g[c].shift(1)
+            lag2 = g[c].shift(2)
 
+            df[f"{c}_lag1"] = lag1
+            df[f"{c}_lag2"] = lag2
+
+            # invalidar si no son meses consecutivos
+            df.loc[~has_lag1, f"{c}_lag1"] = np.nan
+            df.loc[~has_lag2, f"{c}_lag2"] = np.nan
+
+            # delta 1 mes (si hay lag1 válido)
+            d1 = df[c] - df[f"{c}_lag1"]
+            df[f"{c}_d1"] = d1
+            df.loc[~has_lag1, f"{c}_d1"] = np.nan
+
+            # rolling de 3 puntos SOLO si hay continuidad completa (t-2, t-1, t)
+            roll3_mean = g[c].rolling(window=3, min_periods=3).mean().reset_index(level=[0, 1], drop=True)
+            roll3_std = g[c].rolling(window=3, min_periods=3).std().reset_index(level=[0, 1], drop=True)
+
+            df[f"{c}_roll3_mean"] = roll3_mean
+            df[f"{c}_roll3_std"] = roll3_std
+
+            # si no hay continuidad a 2 meses, anula el roll3 (evita ventanas no consecutivas)
+            full3 = has_lag1 & has_lag2
+            df.loc[~full3, f"{c}_roll3_mean"] = np.nan
+            df.loc[~full3, f"{c}_roll3_std"] = np.nan
+
+    # Tiempo
     df["year"] = df[DATE_COL].dt.year
     df["month"] = df[DATE_COL].dt.month
     df["dayofyear"] = df[DATE_COL].dt.dayofyear
 
     df = df.sort_values("_orig_order").drop(columns=["_orig_order"])
     return df
+
 
 def add_spatial_basis_v4(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -426,7 +435,8 @@ def main():
     # CV (fold-safe TE dentro del fold)
     # ----------------------------
     et_cv_params = cfg["model"]["et_cv"]
-    model_cv_default = ExtraTreesRegressor(**et_cv_params)
+    model_cv = ExtraTreesRegressor(**et_cv_params)
+
     def cv_with_fold_te(df, target):
         grid = float(best_grid[target])
         y = df[target].astype(float).values
@@ -449,13 +459,6 @@ def main():
             y_tr = y[tr_idx]
             y_va = y[va_idx]
 
-            
-
-            # If using Poisson loss, enforce non-negative targets
-            _m = cfg.get("model", {}).get("cv_by_target", {}).get(target)
-            if _m and _m.get("name") == "HistGradientBoostingRegressor" and str(_m.get("params", {}).get("loss", "")) == "poisson":
-                y_tr = np.maximum(y_tr, 0.0)
-                y_va = np.maximum(y_va, 0.0)
             mode_t = y_mode_by_target.get(target, y_mode_default)
             fwd, inv = y_transform_fit(y_tr, mode_t)
             y_tr_t = fwd(y_tr)
@@ -484,7 +487,6 @@ def main():
             X_va_X = X_va[feat].copy()
             assert list(X_tr_X.columns) == list(X_va_X.columns), "ERROR CV: column order mismatch"
 
-            model_cv = build_model_from_cfg(cfg, "cv", target)
             pipe = build_pipeline(model_cv, feat)
             pipe.fit(X_tr_X, y_tr_t)
             pred = inv(pipe.predict(X_va_X))
@@ -516,8 +518,9 @@ def main():
     # ----------------------------
     if switches["train_final"]:
         et_final_params = cfg["model"]["et_final"]
-        model_final_default = ExtraTreesRegressor(**et_final_params)
-# start from a CLEAN submission frame
+        model_final = ExtraTreesRegressor(**et_final_params)
+
+        # start from a CLEAN submission frame
         submission_out = template_raw.copy(deep=True)
 
         # train/valid working copies (normalized for modeling)
@@ -539,12 +542,6 @@ def main():
                 )
 
             y = tr[t].astype(float).values
-            
-
-            # If using Poisson loss, enforce non-negative targets
-            _mf = cfg.get("model", {}).get("final_by_target", {}).get(t)
-            if _mf and _mf.get("name") == "HistGradientBoostingRegressor" and str(_mf.get("params", {}).get("loss", "")) == "poisson":
-                y = np.maximum(y, 0.0)
             mode_t = y_mode_by_target.get(t, y_mode_default)
             fwd, inv = y_transform_fit(y, mode_t)
             y_t = fwd(y)
@@ -570,7 +567,6 @@ def main():
 
             print(f"Features locked for {t}: {len(feat_cols)} cols")
 
-            model_final = build_model_from_cfg(cfg, "final", t)
             pipe = build_pipeline(model_final, feat_cols)
             pipe.fit(tr_X, y_t)
             pred = inv(pipe.predict(va_X))

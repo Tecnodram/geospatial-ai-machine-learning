@@ -427,7 +427,7 @@ def main():
     # ----------------------------
     et_cv_params = cfg["model"]["et_cv"]
     model_cv_default = ExtraTreesRegressor(**et_cv_params)
-    def cv_with_fold_te(df, target):
+def cv_with_fold_te(df, target):
         grid = float(best_grid[target])
         y = df[target].astype(float).values
         groups = make_groups(df, grid).values
@@ -456,7 +456,7 @@ def main():
             if _m and _m.get("name") == "HistGradientBoostingRegressor" and str(_m.get("params", {}).get("loss", "")) == "poisson":
                 y_tr = np.maximum(y_tr, 0.0)
                 y_va = np.maximum(y_va, 0.0)
-            mode_t = y_mode_by_target.get(target, y_mode_default)
+mode_t = y_mode_by_target.get(target, y_mode_default)
             fwd, inv = y_transform_fit(y_tr, mode_t)
             y_tr_t = fwd(y_tr)
 
@@ -545,7 +545,7 @@ def main():
             _mf = cfg.get("model", {}).get("final_by_target", {}).get(t)
             if _mf and _mf.get("name") == "HistGradientBoostingRegressor" and str(_mf.get("params", {}).get("loss", "")) == "poisson":
                 y = np.maximum(y, 0.0)
-            mode_t = y_mode_by_target.get(t, y_mode_default)
+mode_t = y_mode_by_target.get(t, y_mode_default)
             fwd, inv = y_transform_fit(y, mode_t)
             y_t = fwd(y)
 
