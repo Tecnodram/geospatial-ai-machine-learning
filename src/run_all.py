@@ -29,10 +29,11 @@ def _load_out_dir_from_config(repo_root: Path, config_path: str) -> Path:
     Lee cfg['io']['out_dir'] si existe, si no usa 'submissions_batch'.
     No rompe si falta yaml (pero en tu env sí existe).
     """
+def _load_out_dir_from_config(repo_root: Path, config_path: str) -> Path:
     try:
         import yaml
         cfg = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
-        out_dir = cfg.get("io", {}).get("out_dir", "submissions_batch")
+        out_dir = cfg.get("project", {}).get("out_dir", "submissions_batch")
         return (repo_root / out_dir).resolve()
     except Exception:
         return (repo_root / "submissions_batch").resolve()

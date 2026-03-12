@@ -1,0 +1,143 @@
+project:
+  name: "exp_sprint2_05_drp_winsor"
+  raw_dir: "data/raw"
+  external_path: "data/external_geofeatures_hydro_v2.csv"
+  chirps_train_path: "data/external/chirps_features_training.csv"
+  chirps_valid_path: "data/external/chirps_features_validation.csv"
+  cache_dir: "cache"
+  out_dir: "experiments/exp_sprint2_05_drp_winsor"
+  exp_dir: "experiments"
+  random_state: 42
+
+io:
+  template_name: "submission_template.csv"
+  train_wq_name: "water_quality_training_dataset.csv"
+  train_ls_name: "landsat_features_training.csv"
+  train_tc_name: "terraclimate_features_training.csv"
+  valid_ls_name: "landsat_features_validation.csv"
+  valid_tc_name: "terraclimate_features_validation.csv"
+
+preprocessing:
+  winsor_quantiles: [0.01, 0.99]
+  log_transform_targets: ["Dissolved Reactive Phosphorus"]
+  missing_threshold: 0.5
+
+features:
+  use_landsat: true
+  use_terraclimate: true
+  use_chirps: true
+  use_external_geofeatures: true
+  rolling_windows: [7, 14, 30, 60, 90]
+  feature_cols_path: "cache/feature_cols.json"
+
+model:
+  type: "HistGradientBoostingRegressor"
+  params:
+    loss: "poisson"
+    max_iter: 1000
+    learning_rate: 0.1
+    max_depth: 6
+    min_samples_leaf: 20
+    random_state: 42
+
+  et_cv:
+    n_estimators: 1400
+    min_samples_leaf: 3
+    max_features: "sqrt"
+    n_jobs: -1
+    random_state: 42
+
+  et_final:
+    n_estimators: 3000
+    min_samples_leaf: 3
+    max_features: "sqrt"
+    n_jobs: -1
+    random_state: 42
+
+  cv_by_target:
+    "Total Alkalinity":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 1400
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+    "Electrical Conductance":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 1400
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+    "Dissolved Reactive Phosphorus":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 1400
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+
+  final_by_target:
+    "Total Alkalinity":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 3000
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+    "Electrical Conductance":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 3000
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+    "Dissolved Reactive Phosphorus":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 3000
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+
+cv:
+  folds: 5
+  folds_dev: 3
+  grouping_strategy: "basin"
+  best_grid:
+    "Total Alkalinity": 1.0
+    "Electrical Conductance": 1.0
+    "Dissolved Reactive Phosphorus": 1.0
+  type: "GroupKFold"
+  n_splits: 5
+  group_grid: 1.0
+
+targets:
+  list: ["Total Alkalinity", "Electrical Conductance", "Dissolved Reactive Phosphorus"]
+  y_mode: "winsor"
+  y_mode_by_target:
+    "Total Alkalinity": "winsor"
+    "Electrical Conductance": "winsor"
+    "Dissolved Reactive Phosphorus": "winsor"
+
+te:
+  enabled: true
+  grids: [0.05, 0.2]
+  oof_grid_for_groups: 0.20
+
+switches:
+  build_dataset: true
+  run_cv: true
+  train_final: true
+  dev_mode: false
+
+batch:
+  candidates: []
+  make_rankblend_drp: false
+  make_balanced_blend: false

@@ -1,0 +1,87 @@
+batch:
+  candidates:
+  - submission_V4_4_DRP_tuned_ET_fixorder.csv
+  - submission_V4_3_ETonly_allTargets__winsor_allTargets_fixorder.csv
+  - submission_A_ensemble_nolog.csv
+  - submission_B_ensemble_log_EC_DRP.csv
+  make_balanced_blend: true
+  make_rankblend_drp: true
+cv:
+  best_grid:
+    Dissolved Reactive Phosphorus: 0.1
+    Electrical Conductance: 0.1
+    Total Alkalinity: 0.03
+  folds: 5
+  folds_dev: 3
+features:
+  drp_focused:
+    enabled: true
+    include_interactions: true
+    include_proxies: true
+  drp_prune:
+    enabled: false
+    max_missing_pct: 0.4
+    min_variance: 1e-6
+  station_aware:
+    enabled: false
+    include_obs_count: true
+io:
+  template_name: submission_template.csv
+  train_ls_name: landsat_features_training.csv
+  train_tc_name: terraclimate_features_training.csv
+  train_wq_name: water_quality_training_dataset.csv
+  valid_ls_name: landsat_features_validation.csv
+  valid_tc_name: terraclimate_features_validation.csv
+model:
+  cv_by_target:
+    Dissolved Reactive Phosphorus:
+      name: ExtraTreesRegressor
+      params: &id001
+        max_features: sqrt
+        min_samples_leaf: 3
+        n_estimators: 1400
+        n_jobs: -1
+        random_state: 42
+  et_cv:
+    max_features: sqrt
+    min_samples_leaf: 3
+    n_estimators: 1400
+    n_jobs: -1
+    random_state: 42
+  et_final:
+    max_features: sqrt
+    min_samples_leaf: 3
+    n_estimators: 3000
+    n_jobs: -1
+    random_state: 42
+  final_by_target:
+    Dissolved Reactive Phosphorus:
+      name: ExtraTreesRegressor
+      params: *id001
+project:
+  cache_dir: cache
+  exp_dir: experiments
+  external_path: data/external_geofeatures_plus_hydro_v2.csv
+  out_dir: submissions_batch
+  raw_dir: data/raw
+switches:
+  build_dataset: true
+  dev_mode: false
+  run_cv: true
+  train_final: true
+targets:
+  list:
+  - Total Alkalinity
+  - Electrical Conductance
+  - Dissolved Reactive Phosphorus
+  y_mode: winsor
+  y_mode_by_target:
+    Dissolved Reactive Phosphorus: log1p
+    Electrical Conductance: winsor
+    Total Alkalinity: winsor
+te:
+  enabled: true
+  grids:
+  - 0.05
+  - 0.2
+  oof_grid_for_groups: 0.2

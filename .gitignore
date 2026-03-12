@@ -25,3 +25,6 @@ notebooks/.ipynb_checkpoints/
 # competition artifacts
 submissions/
 notebooks/
+# Snowflake credentials (never commit)
+.snowflake.env
+.env

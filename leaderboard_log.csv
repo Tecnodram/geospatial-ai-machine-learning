@@ -17,4 +17,26 @@ timestamp,file,score,notes,run_id,recommended_name,recommended_file,proxy
 2026-03-05T18:22:34,,,auto-recommend from batch_blends,exp_20260305_182008,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,995.7087093327966
 2026-03-05T18:29:40,,,auto-recommend from batch_blends,exp_20260305_182719,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,995.7087093327966
 2026-03-05T20:40:32,,,auto-recommend from batch_blends,exp_20260305_203821,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,995.7087093327966
-2026-03-05T21:10:04,,,auto-recommend from batch_blends,exp_20260305_210800,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,993.4236631394153
+2026-03-05T21:10:04,,,auto-recommend from batch_blends,exp_20260305_210800,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,993.4236631394152
+2026-03-05T23:47:02,,,auto-recommend from batch_blends,exp_20260305_234457,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,990.7586470650616
+2026-03-06T00:55:56,,,auto-recommend from batch_blends,exp_20260306_005320,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,967.8176846205632
+2026-03-06T01:33:56,,,auto-recommend from batch_blends,exp_20260306_013139,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,967.8176846205632
+2026-03-06T01:49:01,,,auto-recommend from batch_blends,exp_20260306_014647,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,970.498883567739
+2026-03-06T02:15:15,,,auto-recommend from batch_blends,exp_20260306_021302,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,970.498883567739
+2026-03-06T02:16:33,,,auto-recommend from batch_blends,exp_20260306_021302,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,970.498883567739
+2026-03-06T02:17:26,,,auto-recommend from batch_blends,exp_20260306_021302,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,970.498883567739
+2026-03-06T02:23:20,,,auto-recommend from batch_blends,exp_20260306_022017,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,972.1749144228148
+2026-03-07T00:33:07,,,auto-recommend from batch_blends,exp_20260307_002938,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.14323899777
+2026-03-09T19:17:33,,,auto-recommend from batch_blends,exp_20260309_191636,submission_V5_2_OOFTE_fixkeys_as_is,experiments/drp_basin_rain\submission_V5_2_OOFTE_fixkeys_as_is.csv,986.2118170164337
+2026-03-09T19:22:32,,,auto-recommend from batch_blends,exp_20260309_192149,submission_V5_2_OOFTE_fixkeys_as_is,experiments/drp_variant1\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.5246499520056
+2026-03-09T19:23:27,,,auto-recommend from batch_blends,exp_20260309_192244,submission_V5_2_OOFTE_fixkeys_as_is,experiments/drp_variant2\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.3661438956173
+2026-03-09T19:24:35,,,auto-recommend from batch_blends,exp_20260309_192337,submission_V5_2_OOFTE_fixkeys_as_is,experiments/drp_variant3\submission_V5_2_OOFTE_fixkeys_as_is.csv,983.1853420389195
+2026-03-11T10:49:28,,,auto-recommend from batch_blends,exp_20260311_104847,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.1098979317812
+2026-03-11T10:55:32,,,auto-recommend from batch_blends,exp_20260311_105422,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.1098979317812
+2026-03-11T13:12:06,,,auto-recommend from batch_blends,exp_20260311_131126,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.1098979317812
+2026-03-11T13:33:32,,,auto-recommend from batch_blends,exp_20260311_133241,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,995.3831246556392
+2026-03-11T13:47:43,,,auto-recommend from batch_blends,exp_20260311_134704,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,999.6546020728842
+2026-03-11T13:55:26,,,auto-recommend from batch_blends,exp_20260311_135439,submission_V5_2_OOFTE_fixkeys_as_is,submissions_batch\submission_V5_2_OOFTE_fixkeys_as_is.csv,996.019865999686
+2026-03-11T20:07:05,submission_V4_4_DRP_tuned_ET_fixorder.csv,0.3039,anchor_reference_confirmed,anchor_v44,submission_V4_4_DRP_tuned_ET_fixorder,submissions\submission_V4_4_DRP_tuned_ET_fixorder.csv,
+2026-03-11T20:07:05,blend4_v44_80_134704_20_rank.csv,0.3029,lb_result_mini_sprint,exp_20260311_200705,blend4_v44_80_134704_20_rank,experiments\mini_sprint_blends\blend4_v44_80_134704_20_rank.csv,
+2026-03-11T20:20:00,blend_v44_85_134704_15_rank.csv,0.3029,lb_result_mini_sprint,exp_20260311_200705,blend_v44_85_134704_15_rank,experiments\exp_20260311_200705\mini_sprint_blends\blend_v44_85_134704_15_rank.csv,
