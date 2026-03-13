@@ -1,0 +1,84 @@
+project:
+  name: "regime_expert_drp_v1"
+  description: >
+    Conservative regime-expert DRP plan (prepared only, not executed).
+    Global fallback model + one regime split expert pair.
+
+anchor:
+  submission_path: "submissions/submission_V4_4_DRP_tuned_ET_fixorder.csv"
+
+data:
+  train_base_path: "spatial_audit_folds.csv"
+  tc_train_path: "data/raw/terraclimate_features_training.csv"
+  tc_valid_path: "data/raw/terraclimate_features_validation.csv"
+  geo_features_path: "data/external_geofeatures_plus_hydro_v2.csv"
+  chirps_train_path: "data/external/chirps_features_training.csv"
+  chirps_valid_path: "data/external/chirps_features_validation.csv"
+  template_path: "data/raw/submission_template.csv"
+
+thresholds:
+  month_flag: 12
+  pet_high_threshold: 198.8
+  dist_main_high_threshold: 498.1
+
+cv:
+  fold_column: "fold_basin"
+  n_folds: 5
+
+strategy:
+  mode: "single_split_expert"
+  first_split: "pet_high"   # safest first split for v1
+  fallback_global_if_count_below: 300
+  fallback_global_if_unique_basins_below: 25
+  fallback_global_if_min_fold_count_below: 100
+
+models:
+  global_drp:
+    type: "ExtraTreesRegressor"
+    params:
+      n_estimators: 1400
+      min_samples_leaf: 3
+      max_features: "sqrt"
+      random_state: 42
+      n_jobs: -1
+
+  expert_high:
+    type: "ExtraTreesRegressor"
+    params:
+      n_estimators: 900
+      min_samples_leaf: 4
+      max_features: "sqrt"
+      random_state: 42
+      n_jobs: -1
+
+  expert_low:
+    type: "ExtraTreesRegressor"
+    params:
+      n_estimators: 900
+      min_samples_leaf: 4
+      max_features: "sqrt"
+      random_state: 42
+      n_jobs: -1
+
+features:
+  include_temporal: true
+  include_climate: true
+  include_hydro_subset: true
+  include_regime_flags: true
+  preserve_ta_ec_from_anchor: true
+
+inference:
+  drp_clip_min: 0.0
+  blend_with_anchor:
+    enabled: true
+    alpha: 0.10
+
+output:
+  exp_dir: "experiments"
+  save_cv_report: true
+  save_gate_report: true
+  save_oof_predictions: true
+  submission_prefix: "submission_regime_expert_drp_v1"
+
+execution:
+  prepared_only: true
