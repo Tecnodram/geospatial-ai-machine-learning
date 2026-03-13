@@ -1,0 +1,77 @@
+project:
+  name: "residual_drp_v1"
+  description: >
+    Controlled residual modeling sprint for DRP.
+    Base model: ExtraTreesRegressor OOF on full training data (same config as V4_4).
+    Residual model: RidgeCV on temporal + regime + hydro subset features.
+    Correction: pred_drp = v44_drp + alpha * residual_model_pred.
+    TA/EC: copied exactly from V4_4 anchor.
+
+# Anchor submission (V4_4 LB=0.3039)
+anchor:
+  submission_path: "submissions/submission_V4_4_DRP_tuned_ET_fixorder.csv"
+
+# Data paths
+data:
+  spatial_folds_path: "spatial_audit_folds.csv"
+  tc_train_path: "data/raw/terraclimate_features_training.csv"
+  tc_valid_path: "data/raw/terraclimate_features_validation.csv"
+  chirps_train_path: "data/external/chirps_features_training.csv"
+  chirps_valid_path: "data/external/chirps_features_validation.csv"
+  geo_features_path: "data/external_geofeatures_plus_hydro_v2.csv"
+  template_path: "data/raw/submission_template.csv"
+
+# Base model (OOF pass to compute residuals on training set)
+base_model:
+  type: "ExtraTreesRegressor"
+  n_estimators: 700
+  min_samples_leaf: 3
+  max_features: "sqrt"
+  random_state: 42
+  n_jobs: -1
+  fold_column: "fold_basin"
+
+# Residual model (trained on y_true - y_oof_base)
+residual_model:
+  type: "RidgeCV"
+  alphas: [0.1, 1.0, 10.0, 100.0, 1000.0]
+  features:
+    temporal:
+      - "month"
+      - "sin_doy"
+      - "cos_doy"
+      - "year"
+    climate:
+      - "pet"
+      - "chirps_ppt"
+    hydro_subset:
+      - "dist_main_km"
+      - "basin_area_km2"
+      - "log_upstream_area_km2"
+    regime_flags:
+      - "is_m12"
+      - "is_pet_high"
+      - "is_dist_high"
+      - "is_pet_high_x_m12"
+      - "is_dist_high_x_m12"
+
+# Regime thresholds (validated from DRP change audit)
+regime_thresholds:
+  month_flag: 12
+  pet_high_threshold: 198.8    # q75 of month-12 rows
+  dist_main_high_threshold: 498.1  # q75 of month-12 rows
+
+# Correction weight
+correction:
+  alpha: 0.1
+
+# CV strategy
+cv:
+  strategy: "fold_column"    # use pre-computed fold_basin column
+  fold_column: "fold_basin"
+  n_folds: 5
+
+# Output
+output:
+  exp_dir: "experiments"
+  submission_prefix: "submission_residual_drp_v1"

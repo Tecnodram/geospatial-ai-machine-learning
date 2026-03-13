@@ -53,3 +53,27 @@
 - hist_delta_blend_vs_v44.png
 - scatter_drp_v44_vs_s4.png
 - scatter_drp_v44_vs_blend9010.png
+
+## Safe Progress Update (2026-03-12)
+
+- New immutable candidate: C:\Projects\ey-water-quality-2026\submissions_batch\blend_v44_regime_m12_s4_15_else05_rank.csv
+- Rule: DRP rank blend only, with Sprint 4 weight=0.15 when month==12 and 0.05 otherwise.
+- TA/EC policy: copied exactly from V4_4 anchor (`submission_V4_4_DRP_tuned_ET_fixorder.csv`).
+- Month coverage: month 12 rows=13; other months rows=187; effective S4 weight=0.0565.
+
+### Safety Metrics (candidate)
+
+- DRP mean=30.005676
+- DRP median=28.410180
+- DRP min=16.730570
+- DRP max=41.124877
+- Correlation to V4_4=0.999439
+- MAE to V4_4=0.111462
+- Correlation to blend_v44_90_s4_10_rank=0.999436
+- MAE to blend_v44_90_s4_10_rank=0.269000
+
+### Risk Read
+
+- Relative to 90/10 blend, this candidate is **safer** by anchor-distance criteria:
+  - higher corr-to-V4_4 (0.999439 vs 0.998488)
+  - lower MAE-to-V4_4 (0.111462 vs 0.337393)

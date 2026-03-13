@@ -64,3 +64,16 @@ mae_blend_vs_s4,alignment,2.63098275543914
 basin_id_coverage_ratio,context,1.0
 pet_coverage_ratio,context,1.0
 chirps_coverage_ratio,context,1.0
+min,drp_blend_regime_m12_15_else05,16.73057017352359
+max,drp_blend_regime_m12_15_else05,41.12487731656553
+mean,drp_blend_regime_m12_15_else05,30.005675976280955
+median,drp_blend_regime_m12_15_else05,28.41018021969598
+corr_regime_vs_v44,alignment,0.9994388081234715
+mae_regime_vs_v44,alignment,0.11146218353040928
+corr_regime_vs_blend9010,alignment,0.9994362994172239
+mae_regime_vs_blend9010,alignment,0.26900007801750336
+rows_month12,regime_weighting,13.0
+rows_other_months,regime_weighting,187.0
+s4_weight_month12,regime_weighting,0.15
+s4_weight_else_months,regime_weighting,0.05
+effective_s4_weight,regime_weighting,0.0565
