@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-03-13T02:03:27+00:00",
+  "run_id": "regime_expert_drp_v1_20260312_200249",
+  "global_fallback_logic": {
+    "route_pet_high": "expert_high if active else global",
+    "route_pet_low": "expert_low if active else global",
+    "if_both_inactive": "global_only"
+  },
+  "guard_thresholds": {
+    "min_total_count_per_branch": 300,
+    "min_unique_basins_per_branch": 25,
+    "min_fold_count_per_branch": 100
+  },
+  "branch_support_full_train": {
+    "pet_high": {
+      "name": "pet_high",
+      "total_count": 1908,
+      "unique_basins": 59,
+      "per_fold_counts": [
+        429,
+        196,
+        358,
+        370,
+        555
+      ],
+      "all_folds_present": true,
+      "min_fold_count": 196,
+      "zero_folds": 0,
+      "count_ok": true,
+      "basin_ok": true,
+      "sparse_ok": true,
+      "active_expert": true,
+      "fallback_reason": ""
+    },
+    "pet_low": {
+      "name": "pet_low",
+      "total_count": 7411,
+      "unique_basins": 139,
+      "per_fold_counts": [
+        1436,
+        1667,
+        1506,
+        1494,
+        1308
+      ],
+      "all_folds_present": true,
+      "min_fold_count": 1308,
+      "zero_folds": 0,
+      "count_ok": true,
+      "basin_ok": true,
+      "sparse_ok": true,
+      "active_expert": true,
+      "fallback_reason": ""
+    }
+  },
+  "fold_gate_summary": [
+    {
+      "fold": 0,
+      "global_r2": 0.08772257833379427,
+      "gated_r2": 0.08154261029689946,
+      "pet_high_active": true,
+      "pet_low_active": true,
+      "pet_high_fallback_reason": "",
+      "pet_low_fallback_reason": "",
+      "pet_high_per_fold": [
+        196,
+        358,
+        370,
+        555
+      ],
+      "pet_low_per_fold": [
+        1667,
+        1506,
+        1494,
+        1308
+      ]
+    },
+    {
+      "fold": 1,
+      "global_r2": 0.15521590612118896,
+      "gated_r2": 0.14074558970318818,
+      "pet_high_active": true,
+      "pet_low_active": true,
+      "pet_high_fallback_reason": "",
+      "pet_low_fallback_reason": "",
+      "pet_high_per_fold": [
+        429,
+        358,
+        370,
+        555
+      ],
+      "pet_low_per_fold": [
+        1436,
+        1506,
+        1494,
+        1308
+      ]
+    },
+    {
+      "fold": 2,
+      "global_r2": 0.08970742765539041,
+      "gated_r2": 0.10220518094896336,
+      "pet_high_active": true,
+      "pet_low_active": true,
+      "pet_high_fallback_reason": "",
+      "pet_low_fallback_reason": "",
+      "pet_high_per_fold": [
+        429,
+        196,
+        370,
+        555
+      ],
+      "pet_low_per_fold": [
+        1436,
+        1667,
+        1494,
+        1308
+      ]
+    },
+    {
+      "fold": 3,
+      "global_r2": 0.026445827974083125,
+      "gated_r2": 0.05163873748844228,
+      "pet_high_active": true,
+      "pet_low_active": true,
+      "pet_high_fallback_reason": "",
+      "pet_low_fallback_reason": "",
+      "pet_high_per_fold": [
+        429,
+        196,
+        358,
+        555
+      ],
+      "pet_low_per_fold": [
+        1436,
+        1667,
+        1506,
+        1308
+      ]
+    },
+    {
+      "fold": 4,
+      "global_r2": 0.2735024617104541,
+      "gated_r2": 0.28204072938677915,
+      "pet_high_active": true,
+      "pet_low_active": true,
+      "pet_high_fallback_reason": "",
+      "pet_low_fallback_reason": "",
+      "pet_high_per_fold": [
+        429,
+        196,
+        358,
+        370
+      ],
+      "pet_low_per_fold": [
+        1436,
+        1667,
+        1506,
+        1494
+      ]
+    }
+  ],
+  "branches_active_all_folds": {
+    "pet_high": true,
+    "pet_low": true
+  },
+  "final_fit_branch_status": {
+    "pet_high_active_final": true,
+    "pet_low_active_final": true,
+    "pet_high_fallback_reason": "",
+    "pet_low_fallback_reason": ""
+  }
+}
