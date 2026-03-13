@@ -123,4 +123,5 @@ Global scalability is enabled by widely available geospatial inputs:
 - docs/experiment_summary.md
 - docs/reproduce_pipeline.md
 - docs/project_closure.md
+- docs/snowflake_experiment_log.csv
 - data_structure.md
