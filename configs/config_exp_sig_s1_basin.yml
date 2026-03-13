@@ -1,0 +1,100 @@
+project:
+  name: "exp_sig_s1_basin"
+  raw_dir: "data/raw"
+  external_path: "data/external_geofeatures_plus_hydro_v2.csv"
+  chirps_train_path: "data/external/chirps_features_training.csv"
+  chirps_valid_path: "data/external/chirps_features_validation.csv"
+  cache_dir: "cache"
+  out_dir: "submissions_batch"
+  exp_dir: "experiments"
+
+io:
+  template_name: "submission_template.csv"
+  train_wq_name: "water_quality_training_dataset.csv"
+  train_ls_name: "landsat_features_training.csv"
+  train_tc_name: "terraclimate_features_training.csv"
+  valid_ls_name: "landsat_features_validation.csv"
+  valid_tc_name: "terraclimate_features_validation.csv"
+
+switches:
+  build_dataset: true
+  run_cv: true
+  train_final: true
+  dev_mode: false
+
+cv:
+  folds: 5
+  folds_dev: 3
+  best_grid:
+    "Total Alkalinity": 0.03
+    "Electrical Conductance": 0.1
+    "Dissolved Reactive Phosphorus": 0.1
+
+te:
+  enabled: true
+  grids: [0.05, 0.2]
+  oof_grid_for_groups: 0.2
+
+features:
+  station_aware:
+    enabled: false
+    include_obs_count: true
+  drp_prune:
+    enabled: false
+    max_missing_pct: 0.4
+    min_variance: 1.0e-6
+  drp_focused:
+    enabled: false
+    include_interactions: false
+    include_proxies: false
+  basin_context:
+    enabled: true
+
+targets:
+  list: ["Total Alkalinity", "Electrical Conductance", "Dissolved Reactive Phosphorus"]
+  y_mode: "winsor"
+  y_mode_by_target:
+    "Total Alkalinity": "winsor"
+    "Electrical Conductance": "winsor"
+    "Dissolved Reactive Phosphorus": "none"
+
+model:
+  et_cv:
+    n_estimators: 400
+    min_samples_leaf: 3
+    max_features: "sqrt"
+    n_jobs: -1
+    random_state: 42
+  et_final:
+    n_estimators: 800
+    min_samples_leaf: 3
+    max_features: "sqrt"
+    n_jobs: -1
+    random_state: 42
+  cv_by_target:
+    "Dissolved Reactive Phosphorus":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 400
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+  final_by_target:
+    "Dissolved Reactive Phosphorus":
+      name: "ExtraTreesRegressor"
+      params:
+        n_estimators: 800
+        min_samples_leaf: 3
+        max_features: "sqrt"
+        n_jobs: -1
+        random_state: 42
+
+batch:
+  candidates:
+    - "submission_V4_4_DRP_tuned_ET_fixorder.csv"
+    - "submission_V4_3_ETonly_allTargets__winsor_allTargets_fixorder.csv"
+    - "submission_A_ensemble_nolog.csv"
+    - "submission_B_ensemble_log_EC_DRP.csv"
+  make_rankblend_drp: true
+  make_balanced_blend: true

@@ -1,0 +1,34 @@
+project:
+  name: "exp_hydro_regime_signal_v1"
+  out_dir: "experiments"
+
+data:
+  fold_base_path: "spatial_audit_folds.csv"
+  terraclimate_train_path: "data/raw/terraclimate_features_training.csv"
+  landsat_train_path: "data/raw/landsat_features_training.csv"
+  chirps_train_path: "data/external/chirps_features_training.csv"
+
+cv:
+  fold_column: "fold_basin"
+  n_folds: 5
+
+model:
+  type: "ExtraTreesRegressor"
+  params:
+    n_estimators: 1400
+    min_samples_leaf: 3
+    max_features: "sqrt"
+    random_state: 42
+    n_jobs: -1
+
+regime:
+  pet_high_threshold: 198.8
+  min_branch_train_count: 300
+  min_branch_unique_basins: 25
+
+features:
+  rolling_window_obs: 30
+  top_k_interactions: 8
+
+execution:
+  save_feature_matrix_sample: false
