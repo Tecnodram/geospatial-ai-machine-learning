@@ -125,3 +125,17 @@ Global scalability is enabled by widely available geospatial inputs:
 - docs/project_closure.md
 - docs/snowflake_experiment_log.csv
 - data_structure.md
+
+### Experiment Tracking
+
+Experiments are logged in Snowflake to ensure reproducibility and traceability.
+
+Example logged experiment:
+
+| experiment_id | model | cv_score |
+|---|---|---|
+| exp_20260307_003919 | ExtraTreesRegressor | 0.3129 |
+
+The exported experiment log is available in:
+
+docs/snowflake_experiment_log.csv
